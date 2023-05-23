@@ -1,0 +1,144 @@
+1. Add check to Makefile using a pipe and -wc to check
+ if the number of characters in the output is equal to the argument passed.
+check:
+        if [ `./randall 1000000|wc -c` -eq 1000000 ]; $(c1);$(c2); fi
+2. Split randall into modules
+   1. Put hardware implementation into rand64-hw.c
+   2. Create rand64-hw.h with the declarations of the functions
+   3. Put software implementation into rand64-sw.c
+   4. Create rand64-sw.h with the declarations of the functions
+   5. Put writebytes function into output.c 
+   6. Create output.h with declarations of the functions 
+   7. Include only the necessary #includes in the .c files 
+   8. Remove static keyword so functions could be used across files
+3. Modify Makefile so it compiles all the .c files
+randall: *.c
+        $(CC) $(CFLAGS) *.c -o $@
+4. Add options to program
+   1. Create options.c and options.h
+   2. Options.c contains getopt to implement option processing for -o and -i 
+   3. Options.h contains the declaration of the options.c function
+5. Hardware implementation of new option mrand48_r
+   1. Include srand initialization for mrand48_r option
+srand48_r(time(NULL), &randBuffer);
+   2. Created new function which calls mrand48_r
+unsigned long long hardware_mrand48r (void)
+{
+   long int x;
+mrand48_r(&randBuffer, &x);
+
+
+  return  (unsigned long long) x;
+}
+6. Software implementation for /F option
+   1. Change code so the input file is used as the source of data
+void openfile(char *file)
+{
+  urandstream = fopen (file, "r");
+  if (! urandstream) {
+    fprintf(stderr, "Input File does not exits %s\n",file);
+    abort ();
+  }
+}
+7. Implement -o N option 
+   1. Use the write system call using the buffer size of N
+8. Include more checks to Makefile
+   1. Use optimizer option -o2
+if [ `./randall -i rdrand -o stdio 1000000| wc -c` -eq 1000000 ]; $(c3);$(c4);fi
+        if [ `./randall -i rdrand -o 10000 1000000| wc -c` -eq 1000000 ]; $(c5);$(c6);fi
+        if [ `./randall -i mrand48_r -o stdio 1000000| wc -c` -eq 1000000 ]; $(c7);$(c8);fi
+        if [ `./randall -i mrand48_r -o 10000 1000000| wc -c` -eq 1000000 ]; $(c9);$(c10);fi
+9. Include all files needed for submission in Makefile
+submission-files = $(assignment-files) \
+  notes.txt  options.c options.h output.c output.h \
+  rand64-sw.c rand64-sw.h rand64hw.c rand64-hw.h randall
+10. Make sure all files are no more than 100 columns wide using the provided shell command
+Timing: Outputting to rand.data is the slowest. 
+ Mdrand48_r was the fastest, followed by /dev/urandom,
+ finally with rdrand being the slowest for the same output options. 
+
+
+time ./randall 133562368 >/dev/null
+real        0m3.175s
+user        0m3.146s
+sys        0m0.015s
+
+
+
+
+ time ./randall 133562368 | cat >/dev/null
+real        0m3.262s
+user        0m3.140s
+sys        0m0.228s
+
+
+
+
+ time ./randall 133562368 >rand.data
+real        0m4.907s
+user        0m2.999s
+sys        0m0.255s
+
+
+
+
+time ./randall -i rdrand -o stdio 133562368 >/dev/null
+real        0m3.166s
+user        0m3.131s
+sys        0m0.019s
+
+
+time ./randall -i mrand48_r -o stdio 133562368 >/dev/null
+real        0m0.772s
+user        0m0.708s
+sys        0m0.035s
+
+
+time ./randall -i mrand48_r -o stdio 133562368 | cat >/dev/null
+real        0m0.816s
+user        0m0.718s
+sys        0m0.263s
+
+
+time ./randall -i mrand48_r -o stdio 133562368 >rand.data
+real        0m2.468s
+user        0m0.666s
+sys        0m0.137s
+
+
+time ./randall -i /dev/urandom -o stdio 133562368 >/dev/null
+real        0m1.827s
+user        0m0.872s
+sys        0m0.937s
+
+
+time ./randall -i /dev/urandom -o stdio 133562368  | cat >/dev/null
+real        0m1.939s
+user        0m0.881s
+sys        0m1.163s
+
+
+time ./randall -i /dev/urandom -o stdio 133562368  >rand.data
+real        0m3.665s
+user        0m0.851s
+sys        0m1.048s
+
+
+
+
+time ./randall -i /dev/urandom -o 10000 133562368 >/dev/null
+real        0m1.260s
+user        0m0.320s
+sys        0m0.935s
+
+
+time ./randall -i /dev/urandom -o 10000 133562368  | cat >/dev/null
+real        0m1.419s
+user        0m0.339s
+sys        0m1.068s
+
+
+time ./randall -i /dev/urandom -o 10000 133562368 >rand.data
+real        0m2.857s
+user        0m0.338s
+sys        0m1.026s
